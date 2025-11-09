@@ -2,20 +2,54 @@
 
 A production-quality full-stack application that automatically parses PDF credit card statements and visualizes the extracted data in a clean, professional dashboard.
 
-## 🎯 Features
+## ✨ Features
 
-- **Multi-Issuer Support**: Parses statements from HDFC, ICICI, SBI, Axis Bank, and American Express
-- **Automatic Extraction**: Extracts 5 key fields from each statement:
-  - Issuer identification
+### 🔍 Advanced Parsing
+- **Multi-Bank Support**: Parse statements from HDFC, ICICI, SBI, Axis, and American Express
+- **OCR Support**: Automatically extracts text from scanned/image-based PDFs using Tesseract
+- **3-Tier Text Extraction**: pdfplumber → PyPDF2 → OCR (fallback)
+- **Smart Data Extraction**: 
   - Card last 4 digits
-  - Statement period (start and end dates)
-  - Total amount due
-  - Payment due date
-- **Modern UI**: Clean white & green design with responsive layout
-- **Real-time Parsing**: Upload PDFs and see results immediately
-- **Data Visualization**: Interactive charts and KPI cards
-- **Export Functionality**: Download parsed data as CSV
-- **Search & Filter**: Find statements by issuer, card number, or filename
+  - Card variant (Platinum, Gold, Cashback, etc.)
+  - Total balance/amount payable
+  - Transaction count
+  - Interest charges & finance fees
+  - Merchant categorization
+
+### 📊 Analytics & Insights
+- **Interactive Dashboard**: 
+  - View all parsed statements with sorting (most recent first)
+  - Search and filter by issuer
+  - Export data to CSV with all fields
+  - Clear all statements option
+- **Visual Analytics**:
+  - Amount Payable by Issuer (Bar Chart)
+  - Transactions by Issuer (Bar Chart)
+  - Card Variant Distribution (Pie Chart)
+  - KPI Cards with totals
+- **Merchant Categorization**: 
+  - 8 spending categories (Food, Shopping, Travel, etc.)
+  - Automatic merchant detection and classification
+  - Top spending category display
+
+### 🎨 Modern UI
+- **Dark Mode**: Toggle between light and dark themes with persistence
+- **Responsive Design**: Works seamlessly on desktop, tablet, and mobile
+- **Clean Interface**: Built with React 18, TypeScript, and TailwindCSS
+- **Real-time Updates**: Hot module replacement for instant feedback
+
+## 🆕 What's New (Latest Updates)
+
+- ✅ **OCR Support**: Extract text from scanned PDFs using Tesseract
+- ✅ **Merchant Categorization**: Automatic spending category detection (8 categories)
+- ✅ **Interest Charges**: Track finance charges and late fees
+- ✅ **Dark Mode**: Full dark theme with localStorage persistence
+- ✅ **Enhanced Charts**: 3 interactive charts (2 bar + 1 pie)
+- ✅ **Clear All**: Option to clear all statements for fresh exports
+- ✅ **Sort by Recent**: Most recent statements appear first
+- ✅ **Better Extraction**: 17+ regex patterns for improved accuracy
+- ✅ **Category Badges**: Visual spending category indicators
+- ✅ **Improved UX**: Better dark mode text visibility and centered icons
 
 ## 🛠️ Tech Stack
 
@@ -29,16 +63,21 @@ A production-quality full-stack application that automatically parses PDF credit
 - Lucide React for icons
 
 **Backend:**
-- Python Flask
+- Flask (Python 3.8+)
 - pdfplumber for PDF text extraction
 - PyPDF2 as fallback parser
-- SQLite for optional persistence
+- Tesseract OCR for scanned PDFs (optional)
+- pdf2image for PDF to image conversion
+- In-memory data storage
+- RESTful API design with CORS support
 
 ## 📋 Prerequisites
 
 - **Node.js** 16+ and npm
 - **Python** 3.8+
 - **pip** for Python package management
+- **Tesseract OCR** (optional, for scanned PDFs) - See [OCR_SETUP.md](OCR_SETUP.md)
+- **Poppler** (optional, for OCR) - See [OCR_SETUP.md](OCR_SETUP.md)
 
 ## 🚀 Quick Start
 
@@ -93,24 +132,25 @@ Open your browser and navigate to `http://localhost:3000`
 ```
 CreditCardParser/
 ├── backend/
-│   ├── app.py              # Flask API server
-│   ├── parser.py           # Unified PDF parser with issuer detection
-│   ├── models.py           # Data models (ParsedRecord, StatementPeriod)
-│   └── requirements.txt    # Python dependencies
+│   ├── app.py              # Flask API server with all endpoints
+│   ├── parser.py           # Advanced PDF parser with OCR & categorization
+│   ├── models.py           # Data models (ParsedRecord with new fields)
+│   └── requirements.txt    # Python dependencies (includes OCR libs)
 ├── frontend/
 │   ├── src/
 │   │   ├── pages/          # Login, Parser, Dashboard pages
-│   │   ├── components/     # Reusable UI components
+│   │   ├── components/     # Reusable UI components (with dark mode)
+│   │   ├── contexts/       # AuthContext, ThemeContext
 │   │   ├── services/       # API client
 │   │   ├── types/          # TypeScript type definitions
-│   │   ├── hooks/          # Custom React hooks
-│   │   ├── App.tsx         # Main app component
+│   │   ├── App.tsx         # Main app with providers
 │   │   └── main.tsx        # Entry point
 │   ├── index.html
 │   ├── package.json
 │   ├── vite.config.ts
-│   └── tailwind.config.js
+│   └── tailwind.config.js  # With dark mode enabled
 ├── CreditStatements/       # Sample PDF statements for testing
+├── OCR_SETUP.md           # OCR installation guide
 └── README.md
 ```
 
@@ -143,6 +183,10 @@ CreditCardParser/
 **GET** `/api/export.csv`
 - Downloads: CSV file with all records
 
+**DELETE** `/api/clear`
+- Clears all parsed records from memory
+- Returns: Success confirmation
+
 ## 📊 Data Model
 
 ```typescript
@@ -151,13 +195,12 @@ type ParsedRecord = {
   filename: string
   issuer: 'HDFC' | 'ICICI' | 'SBI' | 'AXIS' | 'AMEX' | 'UNKNOWN'
   card_last4: string | null
-  statement_period: {
-    start: string | null  // ISO date
-    end: string | null    // ISO date
-  }
-  total_amount_due: number | null  // INR
-  payment_due_date: string | null  // ISO date
-  uploaded_at: string              // ISO timestamp
+  card_variant: string | null           // NEW: Platinum, Gold, etc.
+  total_balance: number | null          // Amount payable (INR)
+  transaction_count: number | null      // Number of transactions
+  interest_charges: number | null       // NEW: Interest/finance charges
+  top_merchant_category: string | null  // NEW: Top spending category
+  uploaded_at: string                   // ISO timestamp
   status: 'PARSED' | 'FAILED'
   error?: string
 }
@@ -171,30 +214,57 @@ The `CreditStatements/` directory contains sample PDF statements for testing. Up
 
 ### 1. Login (`/login`)
 - Email and password authentication
-- Form validation
+- Form validation with React Hook Form
 - Demo credentials displayed
+- Dark mode toggle
 
 ### 2. Parser (`/parser`)
-- Drag-and-drop file upload
-- Multi-file support
-- Real-time parsing status
-- Results table with parsed data
+- Drag-and-drop file upload with visual feedback
+- Multi-file PDF support
+- Real-time parsing status with progress
+- Results table with all extracted fields
+- Success/failure indicators
+- Dark mode support
 
 ### 3. Dashboard (`/dashboard`)
-- KPI cards (Total Statements, Total Due, Due Soon)
-- Bar chart showing amount due by issuer
-- Searchable and filterable data table
-- CSV export functionality
+- **KPI Cards**: Total Statements, Amount Payable, Total Transactions
+- **Visual Analytics**:
+  - Amount Payable by Issuer (Bar Chart)
+  - Transactions by Issuer (Bar Chart)
+  - Card Variant Distribution (Pie Chart)
+- **Data Table**: 
+  - Searchable and filterable
+  - Shows all fields including interest and category
+  - Sorted by most recent first
+- **Actions**:
+  - Export to CSV
+  - Clear All Statements
+- **Dark mode** with theme persistence
 
 ## 🔧 Parser Implementation
 
-The parser (`backend/parser.py`) uses a unified approach:
+The parser (`backend/parser.py`) uses an advanced multi-tier approach:
 
-1. **Text Extraction**: Uses pdfplumber (primary) with PyPDF2 fallback
+1. **Text Extraction** (3-tier fallback):
+   - Primary: pdfplumber (fast, works for most PDFs)
+   - Fallback: PyPDF2 (alternative extraction)
+   - Last Resort: Tesseract OCR (for scanned/image PDFs)
+
 2. **Issuer Detection**: Keyword-based heuristics for 5 major issuers
-3. **Field Extraction**: Regex patterns with issuer-specific tweaks
-4. **Data Normalization**: Converts amounts and dates to standard formats
-5. **Error Handling**: Returns failed status with error messages
+
+3. **Field Extraction** with 17+ regex patterns:
+   - Card details (last 4 digits, variant)
+   - Financial data (balance, interest charges)
+   - Transaction information (count, merchants)
+
+4. **Merchant Categorization**:
+   - Extracts merchant names from transactions
+   - Categorizes into 8 spending categories
+   - Returns top spending category
+
+5. **Data Normalization**: Converts amounts to float, handles currency symbols
+
+6. **Error Handling**: Graceful failures with detailed error messages
 
 ### Adding New Issuer Patterns
 
@@ -205,22 +275,34 @@ Edit `backend/parser.py` and add patterns to:
 ## 🎯 Key Features
 
 ### Robust Parsing
-- Handles multiple PDF formats
-- Fallback mechanisms for text extraction
-- Defensive coding for noisy PDFs
-- Normalizes dates and amounts
+- Handles multiple PDF formats (text-based and scanned)
+- 3-tier fallback mechanism (pdfplumber → PyPDF2 → OCR)
+- Defensive coding for noisy/malformed PDFs
+- 17+ regex patterns for data extraction
+- Normalizes amounts and handles currency symbols
+- Merchant detection and categorization
 
 ### Clean UI/UX
-- White background with green (#16A34A) accents
-- Responsive design for all screen sizes
-- Loading states and error toasts
+- **Light & Dark Mode** with localStorage persistence
+- Green (#16A34A) primary color with professional design
+- Fully responsive for desktop, tablet, and mobile
+- Loading states, progress indicators, and error toasts
 - Empty states with helpful messages
 - Accessible keyboard navigation
+- Smooth transitions and hover effects
 
 ### Type Safety
 - Full TypeScript coverage in frontend
-- Type-safe API client
-- Validated data models
+- Type-safe API client with proper error handling
+- Validated data models on both frontend and backend
+- React Context for state management
+
+### Data Insights
+- 3 interactive charts (bar and pie)
+- KPI cards with aggregated metrics
+- Merchant spending categorization
+- Interest charges tracking
+- Sortable and filterable data table
 
 ## 🐛 Troubleshooting
 
@@ -234,8 +316,15 @@ app.run(debug=True, host='0.0.0.0', port=5001)
 
 **PDF parsing fails:**
 - Ensure PDF is not password-protected
-- Check if PDF contains extractable text (not scanned images)
+- For scanned PDFs, install Tesseract OCR (see [OCR_SETUP.md](OCR_SETUP.md))
+- Check if text extraction returns < 50 characters (OCR will auto-trigger)
 - Review error message in the results table
+
+**OCR not working:**
+- Verify Tesseract is installed: `tesseract --version`
+- Check Poppler is installed and in PATH
+- See detailed setup in [OCR_SETUP.md](OCR_SETUP.md)
+- OCR is optional - parser works without it for text-based PDFs
 
 ### Frontend Issues
 
@@ -253,10 +342,11 @@ npm install
 
 ## 📝 Development Notes
 
-- **No External OCR**: Uses only pdfplumber and PyPDF2 (no Tesseract required)
+- **Optional OCR**: Tesseract OCR is optional - works without it for text-based PDFs
 - **Dummy Authentication**: Hardcoded credentials for demo purposes
 - **In-Memory Storage**: Records stored in memory (cleared on restart)
-- **Single Parser File**: All parsing logic in one file for simplicity
+- **Theme Persistence**: Dark mode preference saved in localStorage
+- **Modular Architecture**: Separate contexts for Auth and Theme management
 
 ## 🚀 Production Deployment
 
@@ -264,10 +354,13 @@ For production use, consider:
 1. Implement real authentication (JWT, OAuth)
 2. Add SQLite/PostgreSQL for persistent storage
 3. Add rate limiting and file size validation
-4. Implement proper error logging
+4. Implement proper error logging and monitoring
 5. Add unit tests for parser functions
 6. Set up CI/CD pipeline
 7. Use environment variables for configuration
+8. Optimize OCR performance (caching, async processing)
+9. Add data backup and recovery mechanisms
+10. Implement user management and multi-tenancy
 
 ## 📄 License
 
